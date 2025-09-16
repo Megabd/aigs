@@ -11,14 +11,18 @@ env: Env
 amountOfVisted = 0
 
 
+def heuristic_value(board: np.ndarray) -> int:
+    return np.sum(board)
+
+
 # %%
-def minimax(state: State, maxim: bool) -> int:
-    if state.ended:
-        return state.point
+def minimax(state: State, maxim: bool, depth: int) -> int:
+    if state.ended or depth > 10:
+        return state.point if state.ended else heuristic_value(state.board)
     else:
         temp: int = -10 if maxim else 10
         for action in np.where(state.legal)[0]:  # for all legal actions
-            value = minimax(env.step(state, action), not maxim)
+            value = minimax(env.step(state, action), not maxim, depth + 1)
             temp = max(temp, value) if maxim else min(temp, value)
         return temp
 

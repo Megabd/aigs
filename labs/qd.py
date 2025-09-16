@@ -4,52 +4,101 @@
 
 # Imports
 import numpy as np
-from pcgym.envs import PcgrlEnv
-from typing import Tuple
-from pcgym.envs.helper import get_string_map
-
-# import qdax
-# from qdax.core.map_elites import MAPElites
-from PIL import Image
-# from qdax.core.emitters.mutation_operators import polynomial_mutation
+from functools import partial
+import matplotlib.pyplot as plt
 
 
-# %% Init population (maps)
-def init(cfg) -> Tuple[PcgrlEnv, np.ndarray]:
-    env = PcgrlEnv(prob=cfg.qd.game, rep=cfg.qd.rep, render_mode="rgb_array")
-    env.reset()
-    pop = np.random.randint(0, env.get_num_tiles(), (cfg.qd.n, *env._rep._map.shape))  # type: ignore
-    return env, pop
+# %% n-dimensional function with a strange topology
+@partial(np.vectorize, signature="(d)->()")
+def griewank_function(x):  # this is kind of our fitness function (except we a minimizing)
+    return 1 + np.sum(x**2) / 4000 - np.prod(np.cos(x / np.sqrt(np.arange(1, x.size + 1))))
 
 
-# %% using gym-pcg to evaluate map quality
-def eval(env, p) -> Tuple[int, np.ndarray]:
-    env._rep._map = p
-    string_map = get_string_map(env._rep._map, env._prob.get_tile_types())
-    stats = env._prob.get_stats(string_map)
-    behavior = np.array([stats["disjoint-tubes"], stats["empty"]])
-    return env._prob.get_reward(stats, {k: 0 for k in stats.keys()}), behavior
+@partial(np.vectorize, signature="(d)->(d)", excluded=[0])
+def mutate(sigma, x):  # What are we doing here?
+    return x + np.random.normal(0, sigma, x.shape)
 
 
-def mutate(cfg, env, p) -> np.ndarray:
-    mask = np.random.random(p.shape) < cfg.qd.p
-    p[mask] = np.random.randint(0, env.get_num_tiles(), p[mask].shape)
-    return p
+@partial(np.vectorize, signature="(d),(d)->(d)")
+def crossover(x1, x2):  # TODO: think about what we are doing here. Is it smart?
+    return x1 * np.random.rand() + x2 * (1 - np.random.rand())
 
 
-def archive(state, p):
-    pass
+def step(x, cfg):
+    fitness = griewank_function(x)
+    idxs = np.argsort(fitness)[: int(cfg.population * cfg.proportion)]  # select best
+    seed = np.tile(x[idxs], (int(cfg.population * cfg.proportion), 1))  # cross over
+    x = crossover(seed, seed[np.random.permutation(seed.shape[0])])  # mutate
+    return mutate(cfg.sigma, x), fitness  # return new generation and fitness
 
 
 # %% Setup
-def main(ctx):
-    print("9")
-    exit()
-    env, pop = init(ctx.config)
-    env._rep._mep = pop[0]
-    Image.fromarray(env.render()).save("map.png")
-    fitness, behavior = map(np.array, zip(*list(map(lambda p: eval(env, p), pop))))
-    print(behavior.shape, fitness.shape)
-    # print(fitness)
-    # print(behavior)
-    # print(list(map(lambda p: mutate(ctx.config, env, p), pop)))
+def main(cfg):
+    x = np.random.rand(cfg.population, cfg.dimensions)
+    fitnesses = []
+    for gen in range(cfg.generation):
+        x, fitness = step(x, cfg)
+        fitnesses.append(fitness.min())
+        print(f"Generation {gen}: Best fitness = {fitness.min()}")
+
+    plt.plot(fitnesses)
+    plt.yscale("log")
+    plt.xlabel("Generation")
+    plt.ylabel("Best Fitness")
+    plt.show()
+
+
+# %% Plotting function that I think we should put in utils.py
+def plot(fn):
+    x1 = np.linspace(-10, 10, 100)
+    x2 = np.linspace(-10, 10, 100)
+    xs = np.stack(np.meshgrid(x1, x2), axis=-1)
+    ys = fn(xs)
+    plt.imshow(ys, cmap="viridis")
+    plt.colorbar()
+    plt.show()
+
+
+# env, pop = init(ctx.config)
+# from pcgym.envs import PcgrlEnv
+# from typing import Tuple
+# from pcgym.envs.helper import get_string_map
+
+# import qdax
+# from qdax.core.map_elites import MAPElites
+# from PIL import Image
+# from qdax.core.emitters.mutation_operators import polynomial_mutation
+# env._rep._mep = pop[0]
+# Image.fromarray(env.render()).save("map.png")
+# fitness, behavior = map(np.array, zip(*list(map(lambda p: eval(env, p), pop))))
+# print(behavior.shape, fitness.shape)
+# # print(fitness)
+# # print(behavior)
+# # print(list(map(lambda p: mutate(ctx.config, env, p), pop)))
+
+
+# # %% Init population (maps)
+# def init(cfg) -> Tuple[PcgrlEnv, np.ndarray]:
+#     env = PcgrlEnv(prob=cfg.qd.game, rep=cfg.qd.rep, render_mode="rgb_array")
+#     env.reset()
+#     pop = np.random.randint(0, env.get_num_tiles(), (cfg.qd.n, *env._rep._map.shape))  # type: ignore
+#     return env, pop
+
+
+# # %% using gym-pcg to evaluate map quality
+# def eval(env, p) -> Tuple[int, np.ndarray]:
+#     env._rep._map = p
+#     string_map = get_string_map(env._rep._map, env._prob.get_tile_types())
+#     stats = env._prob.get_stats(string_map)
+#     behavior = np.array([stats["disjoint-tubes"], stats["empty"]])
+#     return env._prob.get_reward(stats, {k: 0 for k in stats.keys()}), behavior
+
+
+# def mutate(cfg, env, p) -> np.ndarray:
+#     mask = np.random.random(p.shape) < cfg.qd.p
+#     p[mask] = np.random.randint(0, env.get_num_tiles(), p[mask].shape)
+#     return p
+
+
+# def archive(state, p):
+#     raise NotImplementedError

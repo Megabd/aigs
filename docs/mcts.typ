@@ -69,7 +69,8 @@ simulated game, he'd maximally look $n$ steps into the future, and then evaluate
 the board using a _heuristic_—a linear combination of manually crafted features
 (e.g.,
 $0.3 times "number of pawns in the center" + 0.1 times "mean distance from ally pawn to enemy king"$,
-or whatever.) You have to:
+or whatever.) One (admitedly crude) heuristic for connect four could be to
+return 0.5 if there are three in a row. You have to:
 - Create a heuristic function that given a board returns a value
 - Copy your minimax function, and add a depth parameter
 - Modify the function to return winner if terminated or heuristic value of depth
