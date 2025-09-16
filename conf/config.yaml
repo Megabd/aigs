@@ -7,8 +7,8 @@ qd:
   game: "smb"
 
 mcts:
-  game: "connect_four"
+  game: "tic_tac_toe"
   maxim: "human"
-  minim: "random"
-  # compute: 10
-  # c: 0.9
+  minim: "monte_carlo"
+  compute: 100000
+  c: 0.9

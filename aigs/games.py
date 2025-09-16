@@ -49,7 +49,7 @@ class ConnectFour(Env):
         return State(
             board=board,
             legal=legal,
-            ended=not legal.any() | winner,
+            ended=not legal.any() or winner,
             point=point,
             maxim=not state.maxim,
         )
@@ -82,7 +82,7 @@ class TicTacToe(Env):
         return State(
             board=board,
             legal=board.flatten() == 0,  # empty board positions
-            ended=(board != 0).all() | winner,
+            ended=(board != 0).all() or winner,
             point=(1 if state.maxim else -1) if winner else 0,
             maxim=not state.maxim,
         )
