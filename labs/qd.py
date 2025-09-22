@@ -6,17 +6,20 @@
 import numpy as np
 from functools import partial
 import matplotlib.pyplot as plt
+from typing import Tuple
+from pcgym import PcgrlEnv
+from PIL import Image
 
 
 # %% n-dimensional function with a strange topology
 @partial(np.vectorize, signature="(d)->()")
-def griewank_function(x):  # this is kind of our fitness function (except we a minimizing)
-    return 1 + np.sum(x**2) / 4000 - np.prod(np.cos(x / np.sqrt(np.arange(1, x.size + 1))))
+def griewank_function(pop):  # this is kind of our fitness function (except we a minimizing)
+    return 1 + np.sum(pop**2) / 4000 - np.prod(np.cos(pop / np.sqrt(np.arange(1, pop.size + 1))))
 
 
 @partial(np.vectorize, signature="(d)->(d)", excluded=[0])
-def mutate(sigma, x):  # What are we doing here?
-    return x + np.random.normal(0, sigma, x.shape)
+def mutate(sigma, pop):  # What are we doing here?
+    return pop + np.random.normal(0, sigma, pop.shape)
 
 
 @partial(np.vectorize, signature="(d),(d)->(d)")
@@ -24,39 +27,42 @@ def crossover(x1, x2):  # TODO: think about what we are doing here. Is it smart?
     return x1 * np.random.rand() + x2 * (1 - np.random.rand())
 
 
-def step(x, cfg):
-    fitness = griewank_function(x)
-    idxs = np.argsort(fitness)[: int(cfg.population * cfg.proportion)]  # select best
-    seed = np.tile(x[idxs], (int(cfg.population * cfg.proportion), 1))  # cross over
-    x = crossover(seed, seed[np.random.permutation(seed.shape[0])])  # mutate
-    return mutate(cfg.sigma, x), fitness  # return new generation and fitness
+def step(pop, cfg):
+    loss = griewank_function(pop)
+    idxs = np.argsort(loss)[: int(cfg.population * cfg.proportion)]  # select best
+    best = np.tile(pop[idxs], (int(cfg.population * cfg.proportion), 1))  # cross over
+    pop = crossover(best, best[np.random.permutation(best.shape[0])])  # mutate
+    return mutate(cfg.sigma, pop), loss  # return new generation and loss
 
 
 # %% Setup
 def main(cfg):
-    x = np.random.rand(cfg.population, cfg.dimensions)
-    fitnesses = []
-    for gen in range(cfg.generation):
-        x, fitness = step(x, cfg)
-        fitnesses.append(fitness.min())
-        print(f"Generation {gen}: Best fitness = {fitness.min()}")
+    env, pop = init_pcgym(cfg)
+    env._rep._map = pop[0]
+    Image.fromarray(env.render()).save("map.png")
 
-    plt.plot(fitnesses)
-    plt.yscale("log")
-    plt.xlabel("Generation")
-    plt.ylabel("Best Fitness")
-    plt.show()
 
+# %% Init population (maps)
+def init_pcgym(cfg) -> Tuple[PcgrlEnv, np.ndarray]:
+    env = PcgrlEnv(prob=cfg.game, rep=cfg.rep, render_mode="rgb_array")
+    env.reset()
+    pop = np.random.randint(0, env.get_num_tiles(), (cfg.n, *env._rep._map.shape))  # type: ignore
+    return env, pop
+
+
+#########################################################################
+##  BELOW HERE THERE BE DRAGONS (left over stuff i played around with) ##
+#########################################################################
 
 # %% Plotting function that I think we should put in utils.py
-def plot(fn):
-    x1 = np.linspace(-10, 10, 100)
-    x2 = np.linspace(-10, 10, 100)
-    xs = np.stack(np.meshgrid(x1, x2), axis=-1)
-    ys = fn(xs)
-    plt.imshow(ys, cmap="viridis")
-    plt.colorbar()
-    plt.show()
+# def our_plot_function(fn):
+#     x1 = np.linspace(-10, 10, 100)
+#     x2 = np.linspace(-10, 10, 100)
+#     xs = np.stack(np.meshgrid(x1, x2), axis=-1)
+#     ys = fn(xs)
+#     plt.imshow(ys, cmap="viridis")
+#     plt.colorbar()
+#     plt.show()
 
 
 # env, pop = init(ctx.config)
@@ -68,21 +74,12 @@ def plot(fn):
 # from qdax.core.map_elites import MAPElites
 # from PIL import Image
 # from qdax.core.emitters.mutation_operators import polynomial_mutation
-# env._rep._mep = pop[0]
-# Image.fromarray(env.render()).save("map.png")
+
 # fitness, behavior = map(np.array, zip(*list(map(lambda p: eval(env, p), pop))))
 # print(behavior.shape, fitness.shape)
 # # print(fitness)
 # # print(behavior)
 # # print(list(map(lambda p: mutate(ctx.config, env, p), pop)))
-
-
-# # %% Init population (maps)
-# def init(cfg) -> Tuple[PcgrlEnv, np.ndarray]:
-#     env = PcgrlEnv(prob=cfg.qd.game, rep=cfg.qd.rep, render_mode="rgb_array")
-#     env.reset()
-#     pop = np.random.randint(0, env.get_num_tiles(), (cfg.qd.n, *env._rep._map.shape))  # type: ignore
-#     return env, pop
 
 
 # # %% using gym-pcg to evaluate map quality
