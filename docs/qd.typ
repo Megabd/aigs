@@ -23,7 +23,6 @@ want to cover/explore.
 = Evolutionary algorithms
 
 
-
 Today (September 16th, 2025) we will be playing with evolutionary algorithms, as
 a way to get ready for quality diversity algorithms. Evolutionary algorithms are
 at their core, extremely intuitive: randomly mutate, see what works, and then
@@ -51,8 +50,6 @@ You will now:
 4. Make some cool plots of the results (get creative)
 
 
-
-
 = PCGYM
 
 Recall that Gym @towers2024 is a framework for reinforcement learning
@@ -66,48 +63,30 @@ You will now:
 1. Explore `pcgym` #footnote[My fork of `gym-pcgrl` modified to work with our
     course. It is located at #link(
       "https://github.com/syrkis/pcgym",
-    ) but is already included in our environment] and have a random agent play a
-  level of any game.
-2. Replace the random agent with a _randomly initialized_ agent, that maps game
-  states to action.
-3. Improve the randomly initialized agent using the basic evolutionary algorithm
-  used in the previous task.
+    ) but is already included in our environment] and the `.get_stats` method of
+  the `._prob` (problem attribute)
+// 2. Replace the random agent with a _randomly initialized_ agent, that maps game
+// states to action.
+// 3. Improve the randomly initialized agent using the basic evolutionary algorithm
+// used in the previous task.
 4. Bonus: think about whether the cross-over operator makes sense for your
   agent, and why / why not this is the case.
 
-= A\*
 
-A\* (A-star) is a pathfinding algorithm combining cost-so-far and estimated
-cost-to-goal, balancing shortest-path (like Dijkstra) with goal-directed search
-(like greedy best-first). In games like Mario, A\* is used to guide agents
-efficiently through levels by evaluating possible moves via a cost function
-(e.g., distance, obstacles) and a heuristic (e.g., estimated steps to the flag),
-generating optimal or near-optimal action sequences toward the goal. You will
-now:
-1. Think a bit about A\* (what it is and how you would implement it)
-2. Implement A\* or find an implementation online and have it play a level from
-  `pcgym`
-
-= picbreeder
-
-Play around with pic breeder by:
-1. Drawing something
-2. Trying to then find it
-
-= Novelty search
-
-In `pcgym` make a setup that finds _new_ levels.
 
 = Content generation
 
 We can optimize levels, just like we can optimize players. Thinking about what
 it means for a level to be "fit", you must now:
-1. Define a fitness function for a level in `pcgym` (A\* can play a role in
-  evaluating a level)
+0. Read and use the
+1. Define a fitness function for a level in `pcgym` (use `env._prob.get_stats`)
 2. Define two _behavioral_ dimensions, meaning ways in which levels can be
   different, that are _not_ fitness related (e.g., number of jumps).
 3. Generate an archive of good levels that are different from one another with
-  (Timothée's beloved) MAP-Elite algorithm.
+4. (Timothée's beloved) MAP-Elite algorithm. Fitness should be inverse distance
+  from the goal, and the behaviors axis should be number of jumps.
+5. Add another behaviors axis of your choice.
+6. Bonus: mess with `pcgym` to make the game human playable
 
 #figure(
   image("me_pseudocode.png"),
