@@ -58,7 +58,6 @@ class Node:
         self.children = []
 
 
-# Intuitive but difficult in terms of code
 def monte_carlo(state: State, cfg) -> int:
     v0 = Node(state, None, None)
     for _ in range(cfg.compute):
